@@ -1,1 +1,2 @@
-liboctree.a
+*.a
+*.o
