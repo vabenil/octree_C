@@ -1,7 +1,6 @@
 #include "octree.h"
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 
 #define REPEAT8(x) {x; x; x; x; x; x; x; x;}
@@ -86,8 +85,6 @@ node_t *node_get_nearest(
     for (; c_level < level; c_level++) {
         uint8_t c_index = (index >> bit) & 0x7;
 
-        assert(sizeof(leaf_t) == sizeof(uint16_t));
-        assert(l_node->level == c_level);
         if (l_node->is_full) break;
         if (!l_node->childreen) break;
 
@@ -115,7 +112,6 @@ node_t *node_get_or_create(
         l_node = l_node->childreen[c_index];
         bit -= 3;
     }
-    assert(l_node->level == level);
     return l_node;
 }
 
@@ -180,8 +176,6 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
         LEAVES_FILL(l_node->leaves, l_node->dom_leaf);
     }
 
-    assert(l_node->level == oc_depth - 1);
-    assert(l_node->leaves != NULL);
     l_node->leaves[index & 0x7] = leaf;
 
     if (LEAVES_FULL_OF_LEAF(l_node->leaves, leaf)) {
@@ -312,7 +306,6 @@ void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
     if (snode.is_full) return;
 
     if (is_last) {
-        assert(node->leaves != NULL);
         if (!fwrite(node->leaves, sizeof(leaf_t), 8, fp)) {
             printf("ARRAY NOT WRITTEN\n");
         }
@@ -358,8 +351,6 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
 
         if (!is_full) {
             if (is_last) {
-                assert(cnode->leaves != NULL);
-
                 if (!fwrite(cnode->leaves, sizeof(leaf_t), 8, fp)) {
                     printf("Error: Couldn't write to file\n");
                     break;
@@ -379,7 +370,6 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
                 : !((ni >> ((depth + 1) * 3)) & 0x1) - 1;
 
         cnode = node_get_nearest(node, i, snode.level + delta, oc_depth);
-        assert(c < (1 << 15));
         c++;
     }
     return bits_written;
@@ -451,7 +441,6 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
         if (!is_full) {
             if (is_last) {
                 cnode->leaves = calloc(8, sizeof(leaf_t));
-                assert(cnode->leaves != NULL);
 
                 if (!fread(cnode->leaves, sizeof(leaf_t), 8, fp)) {
                     printf("Couldn't read from file");
@@ -467,7 +456,6 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
         i += increment;
 
         cnode = node_get_nearest(node, i, oc_depth - 1, oc_depth);
-        assert(c < (1 << 15));
         c++;
     }
     return bits_read;
