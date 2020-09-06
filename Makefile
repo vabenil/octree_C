@@ -1,16 +1,17 @@
 CC := gcc
 
+IDIR := ./
+
 SRC := octree.c 
 OBJ := octree.o
 
 
-FLAGS := --std=c99 -Wall -lm
-FLAGS += -g
+FLAGS := --std=c99 -Wall -I$(IDIR) -lm -g
 
 TARGET := liboctree.a
 
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJ)
 	ar rsc $@ $^
 
 
