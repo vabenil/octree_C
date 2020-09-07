@@ -15,6 +15,7 @@ node_t *node_construct()
     node->dom_leaf = 0;
     node->is_original = 0;
     node->level = 0;
+    node->childreen = NULL;
     return node;
 }
 
@@ -302,6 +303,7 @@ void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
     bool is_last = (snode.level == oc_depth - 1);
 
     if (!fwrite(&snode, sizeof(snode), 1, fp)) printf("STRUCT NOT WRITTEN\n");
+    node_print(node, "node");
 
     if (snode.is_full) return;
 
@@ -309,6 +311,7 @@ void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
         if (!fwrite(node->leaves, sizeof(leaf_t), 8, fp)) {
             printf("ARRAY NOT WRITTEN\n");
         }
+        leaves_print(node->leaves, "node->leaves");
     }
     else {
         for (int i = 0; i < 8; i++) {
@@ -318,6 +321,7 @@ void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
 }
 
 
+/* Currently doesn't work */
 uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
 {
     node_t *cnode = node;
@@ -327,10 +331,10 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
 
     while (i < max_i) {
         simple_node_t snode = {
-            cnode->is_full,
-            cnode->is_original,
-            cnode->level,
-            cnode->dom_leaf
+            .is_full = cnode->is_full,
+            .is_original = cnode->is_original,
+            .level = cnode->level,
+            .dom_leaf = cnode->dom_leaf
         };
 
         bool is_last = (snode.level == oc_depth - 1);
@@ -338,8 +342,7 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
         uint8_t depth = oc_depth - snode.level;
         uint8_t levels = depth - (!(is_full || is_last));
         uint32_t increment = (is_full || is_last) * 1 << (levels * 3);
-        uint32_t prev_i = i, ni;
-        int delta;
+        uint32_t prev_i = i, nl;
 
         if (!fwrite(&snode, sizeof(snode), 1, fp)) {
             printf("Error: Couldn't write to file\n");
@@ -361,15 +364,21 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
         }
         i += increment;
 
-        // There is a better way to do this, but with my current knowledge this
-        // is the best I can do.
-        ni = (prev_i & (~(1 << ((depth + 1) * 3)))) + increment;
-        delta =
-            ((i - prev_i) == 0)
-                ? 1
-                : !((ni >> ((depth + 1) * 3)) & 0x1) - 1;
+        /* Next level to write to disk*/
+        if (increment == 0) {
+            nl = snode.level + 1;
+        }
+        else {
+            uint32_t diff = i ^ prev_i;
+            nl = 1;
+            for (; nl < snode.level; nl++)
+                if ((diff >> ((oc_depth - nl) * 3)) & 0x7)
+                    break;
+        }
 
-        cnode = node_get_nearest(node, i, snode.level + delta, oc_depth);
+        printf("increment %u | ni %u | i %u\n",
+                increment, nl, i);
+        cnode = node_get_nearest(node, i, nl, oc_depth);
         c++;
     }
     return bits_written;
@@ -384,20 +393,26 @@ void node_r_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
 {
     simple_node_t snode;
 
-    if (!fread(&snode, sizeof(simple_node_t), 1, fp)) return;
+    if (!fread(&snode, sizeof(simple_node_t), 1, fp)) {
+        printf("Error: Couldn't read\n");
+        return;
+    }
+    node_print(node, "node");
 
     node->is_full = snode.is_full;
     node->is_original = snode.is_original;
     node->level = snode.level;
     node->dom_leaf = snode.dom_leaf;
+    node->childreen = NULL;
 
-    bool is_last = (oc_depth == snode.level - 1);
+    bool is_last = (oc_depth == snode.level + 1);
 
     if (snode.is_full) return;
 
     if (is_last) {
         node->leaves = calloc(8, sizeof(leaf_t));
         fread(node->leaves, sizeof(leaf_t), 8, fp);
+        leaves_print(node->leaves, "node->leaves");
     }
     else {
         node_create_childreen(node);
@@ -447,7 +462,6 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
                     break;
                 }
                 bits_read += sizeof(leaf_t) * 8;
-                /* leaves_print(cnode->leaves, "cnode->leaves"); */
             }
             else {
                 node_create_childreen(cnode);
@@ -465,6 +479,12 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
 uint32_t octree_load_f(octree_t *octree, FILE *fp)
 {
     return node_load_f(octree->root, octree->depth, fp);
+}
+
+
+void octree_r_load_f(octree_t *octree, FILE *fp)
+{
+    node_r_load_f(octree->root, octree->depth, fp);
 }
 
 
