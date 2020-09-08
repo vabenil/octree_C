@@ -320,70 +320,6 @@ void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
 }
 
 
-/* Currently doesn't work */
-uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
-{
-    node_t *cnode = node;
-
-    uint32_t i = 0, c = 0, bits_written = 0;
-    uint32_t max_i = 1 << (oc_depth * 3);
-
-    while (i < max_i) {
-        simple_node_t snode = {
-            .is_full = cnode->is_full,
-            .is_original = cnode->is_original,
-            .level = cnode->level,
-            .dom_leaf = cnode->dom_leaf
-        };
-
-        bool is_last = (snode.level == oc_depth - 1);
-        bool is_full = snode.is_full;
-        uint8_t depth = oc_depth - snode.level;
-        uint8_t levels = depth - (!(is_full || is_last));
-        uint32_t increment = (is_full || is_last) * 1 << (levels * 3);
-        uint32_t prev_i = i, nl;
-
-        if (!fwrite(&snode, sizeof(snode), 1, fp)) {
-            printf("Error: Couldn't write to file\n");
-            break;
-        }
-
-        node_print(cnode, "cnode");
-        bits_written += sizeof(snode);
-
-        if (!is_full) {
-            if (is_last) {
-                if (!fwrite(cnode->leaves, sizeof(leaf_t), 8, fp)) {
-                    printf("Error: Couldn't write to file\n");
-                    break;
-                }
-                leaves_print(cnode->leaves, "cnode->leaves");
-                bits_written += sizeof(leaf_t) * 8;
-            }
-        }
-        i += increment;
-
-        /* Next level to write to disk*/
-        if (increment == 0) {
-            nl = snode.level + 1;
-        }
-        else {
-            uint32_t diff = i ^ prev_i;
-            nl = 1;
-            for (; nl < snode.level; nl++)
-                if ((diff >> ((oc_depth - nl) * 3)) & 0x7)
-                    break;
-        }
-
-        printf("increment %u | ni %u | i %u\n",
-                increment, nl, i);
-        cnode = node_get_nearest(node, i, nl, oc_depth);
-        c++;
-    }
-    return bits_written;
-}
-
-
 /* NOTE:
  * This recursive functions aren't efficient
  * rewrite later
@@ -422,22 +358,87 @@ void node_r_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
 }
 
 
-uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
+uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
 {
     node_t *cnode = node;
-    uint32_t i = 0, c = 0, bits_read = 0;
+
+    uint64_t leaves_size = sizeof(leaf_t) * 8;
+    uint32_t i = 0, c = 0,
+             bits_written = 0, ofs = 0;
+    uint32_t max_i = 1 << (oc_depth * 3);
+
+    while (i < max_i) {
+        simple_node_t snode = {
+            .is_full = cnode->is_full,
+            .is_original = cnode->is_original,
+            .level = cnode->level,
+            .dom_leaf = cnode->dom_leaf
+        };
+
+        bool is_last = (snode.level == oc_depth - 1);
+        bool is_full = snode.is_full;
+        uint8_t depth = oc_depth - snode.level;
+        uint8_t levels = depth - (!(is_full || is_last));
+        uint32_t increment = (is_full || is_last) * 1 << (levels * 3);
+        uint32_t prev_i = i, nl;
+
+        memcpy(buff + ofs, &snode, sizeof(snode));
+        ofs += sizeof(snode);
+
+        bits_written += sizeof(snode);
+
+        node_print(cnode, "cnode");
+
+        if (!is_full) {
+            if (is_last) {
+                memcpy(buff + ofs, cnode->leaves, leaves_size);
+                ofs += leaves_size;
+
+                leaves_print(cnode->leaves, "cnode->leaves");
+                bits_written += leaves_size;
+            }
+        }
+        i += increment;
+
+        /* Next level to write to disk*/
+        if (increment == 0) {
+            nl = snode.level + 1;
+        }
+        else {
+            uint32_t diff = i ^ prev_i;
+            nl = 1;
+            for (; nl < snode.level; nl++)
+                if ((diff >> ((oc_depth - nl) * 3)) & 0x7)
+                    break;
+        }
+
+        printf("increment %u | ni %u | i %u\n",
+                increment, nl, i);
+        cnode = node_get_nearest(node, i, nl, oc_depth);
+        c++;
+    }
+    return bits_written;
+}
+
+
+uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
+{
+    node_t *cnode = node;
+    uint32_t i = 0, c = 0,
+             bits_read = 0, ofs = 0;
 
     uint32_t max_i = 1 << (oc_depth * 3);
 
     while (i < max_i) {
         simple_node_t snode;
+
         uint32_t levels, increment, depth;
         bool is_full, is_last;
 
-        if (!fread(&snode, sizeof(snode), 1, fp)) {
-            printf("Error: Couldn't read from file\n");
-            break;
-        }
+        memcpy(&snode, buff + ofs, sizeof(snode));
+
+        ofs += sizeof(snode);
+        bits_read += sizeof(snode);
 
         depth = oc_depth - snode.level;
         is_full = snode.is_full;
@@ -450,16 +451,14 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
         cnode->dom_leaf = snode.dom_leaf;
 
         increment = (is_full || is_last) * 1 << (levels * 3);
-        bits_read += sizeof(snode);
 
         if (!is_full) {
             if (is_last) {
                 cnode->leaves = calloc(8, sizeof(leaf_t));
 
-                if (!fread(cnode->leaves, sizeof(leaf_t), 8, fp)) {
-                    printf("Couldn't read from file");
-                    break;
-                }
+                memcpy(cnode->leaves, buff + ofs, sizeof(leaf_t) * 8);
+
+                ofs += sizeof(leaf_t) * 8;
                 bits_read += sizeof(leaf_t) * 8;
             }
             else {
@@ -471,6 +470,53 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
         cnode = node_get_nearest(node, i, oc_depth - 1, oc_depth);
         c++;
     }
+    return bits_read;
+}
+
+
+uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
+{
+    uint32_t num_nodes = ((1 << ((oc_depth - 1) * 3)) - 1);
+    uint32_t num_leafs = 1 << (oc_depth * 3);
+
+    uint64_t max_buff_size =
+        num_nodes * sizeof(simple_node_t) +
+        num_leafs * sizeof(leaf_t);
+
+    uint32_t bits_written = 0;
+    char *buff;
+
+    if (!(buff = malloc(max_buff_size))) return 0;
+
+    bits_written = node_save_buffer(node, oc_depth, buff);
+
+    bits_written = fwrite(buff, 1, bits_written, fp);
+
+    free(buff);
+    return bits_written;
+}
+
+
+uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
+{
+    uint32_t num_nodes = ((1 << ((oc_depth - 1) * 3)) - 1);
+    uint32_t num_leafs = 1 << (oc_depth * 3);
+
+    uint64_t max_buff_size =
+        num_nodes * sizeof(simple_node_t) +
+        num_leafs * sizeof(leaf_t);
+
+    uint64_t bits_read;
+
+    char *buff;
+    if (!(buff = malloc(max_buff_size))) return 0;
+
+    bits_read = fread(buff, 1, max_buff_size, fp);
+
+    if (bits_read)
+        bits_read = node_load_buffer(node, oc_depth, buff);
+
+    free(buff);
     return bits_read;
 }
 

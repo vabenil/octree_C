@@ -110,4 +110,5 @@ extern void octree_r_save_f(octree_t *octree, FILE *fp);
 
 extern uint32_t octree_save_f(octree_t *octree, FILE *fp);
 
+
 #endif /* OCTREE_H */
