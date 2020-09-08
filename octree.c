@@ -180,7 +180,6 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
     l_node->leaves[index & 0x7] = leaf;
 
     if (LEAVES_FULL_OF_LEAF(l_node->leaves, leaf)) {
-        printf("IS FULL");
         free(l_node->leaves);
         l_node->leaves = NULL;
         l_node->is_full = true;
