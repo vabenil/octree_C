@@ -217,14 +217,13 @@ uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, void *buff)
 
         bits_written += sizeof(snode);
 
-        node_print(cnode, "cnode");
-
+        /* node_print(cnode, "cnode"); */
         if (!is_full) {
             if (is_last) {
                 memcpy(buff + ofs, cnode->leaves, leaves_size);
                 ofs += leaves_size;
 
-                leaves_print(cnode->leaves, "cnode->leaves");
+                /* leaves_print(cnode->leaves, "cnode->leaves"); */
                 bits_written += leaves_size;
             }
         }
@@ -242,8 +241,8 @@ uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, void *buff)
                     break;
         }
 
-        printf("increment %u | ni %u | i %u\n",
-                increment, nl, i);
+        /* printf("increment %u | ni %u | i %u\n", */
+        /*         increment, nl, i); */
         cnode = node_get_nearest(node, i, nl, oc_depth);
         c++;
     }
@@ -310,8 +309,8 @@ uint32_t node_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
     uint32_t num_leafs = 1 << (oc_depth * 3);
 
     uint64_t max_buff_size =
-        num_nodes * sizeof(simple_node_t) +
-        num_leafs * sizeof(leaf_t);
+        (num_nodes * sizeof(simple_node_t)) +
+        (num_leafs * sizeof(leaf_t));
 
     uint32_t bits_written = 0;
     char *buff;
@@ -333,8 +332,8 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
     uint32_t num_leafs = 1 << (oc_depth * 3);
 
     uint64_t max_buff_size =
-        num_nodes * sizeof(simple_node_t) +
-        num_leafs * sizeof(leaf_t);
+        (num_nodes * sizeof(simple_node_t)) +
+        (num_leafs * sizeof(leaf_t));
 
     uint64_t bits_read;
 
