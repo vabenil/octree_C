@@ -188,7 +188,7 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 }
 
 
-uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
+uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, void *buff)
 {
     node_t *cnode = node;
 
@@ -251,7 +251,7 @@ uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
 }
 
 
-uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
+uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const void *buff)
 {
     node_t *cnode = node;
     uint32_t i = 0, c = 0,
@@ -450,6 +450,18 @@ void octree_free(octree_t *octree)
 {
     if (octree->root) free(octree->root);
     if (octree) free(octree);
+}
+
+
+uint32_t octree_load_buffer(octree_t *octree, const void *buff)
+{
+    return node_load_buffer(octree->root, octree->depth, buff);
+}
+
+
+uint32_t octree_save_buffer(octree_t *octree, void *buff)
+{
+    return node_save_buffer(octree->root, octree->depth, buff);
 }
 
 

@@ -102,7 +102,11 @@ extern int octree_leaf_get(octree_t *octree, uint32_t index);
 extern void octree_leaf_set(octree_t *octree, uint32_t index, leaf_t leaf);
 
 extern void octree_r_free_childreen(octree_t *octree);
+
 extern void octree_free(octree_t *octree);
+
+extern uint32_t octree_save_buffer(octree_t *octree, void *buff);
+extern uint32_t octree_load_buffer(octree_t *octree, const void *buff);
 
 extern uint32_t octree_load_f(octree_t *octree, FILE *fp);
 
