@@ -106,8 +106,6 @@ extern void octree_free(octree_t *octree);
 
 extern uint32_t octree_load_f(octree_t *octree, FILE *fp);
 
-extern void octree_r_save_f(octree_t *octree, FILE *fp);
-
 extern uint32_t octree_save_f(octree_t *octree, FILE *fp);
 
 

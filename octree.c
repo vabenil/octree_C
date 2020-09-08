@@ -188,176 +188,6 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 }
 
 
-/* NOTE:
- * Recursive slow. Rewrite this function later.
- */
-void node_r_free_last(node_t *node, uint8_t last, uint8_t depth)
-{
-    uint8_t level = node->level;
-    bool is_local_last = (level == last - 1);
-    bool is_last_node = (level == depth - 1);
-
-    if (node->is_full) return;
-
-    if (is_local_last) {
-        if (is_last_node) {
-            free(node->leaves);
-            node->leaves = NULL;
-        }
-        else {
-            for (int i = 0; i < 8; i++) {
-                free(node->childreen[i]);
-            }
-            free(node->childreen);
-            node->childreen = NULL;
-        }
-    }
-    else {
-        for (int i = 0; i < 8; i++) {
-            node_r_free_last(node->childreen[i], last, depth);
-        }
-    }
-}
-
-
-void node_r_free_childreen(node_t *node, uint8_t depth)
-{
-    int l = node->level;
-    for (int i = depth; i > l; i--) {
-        node_r_free_last(node, i, depth);
-    }
-}
-
-
-octree_t *octree_construct(uint8_t depth)
-{
-    octree_t *octree = malloc(sizeof(octree_t));
-
-    octree->root = node_construct();
-    octree->depth = depth;
-    return octree;
-}
-
-
-void octree_r_initialize(octree_t *octree)
-{
-    node_r_initialize(octree->root, octree->depth);
-}
-
-
-void octree_r_free_childreen(octree_t *octree)
-{
-    node_r_free_childreen(octree->root, octree->depth);
-}
-
-
-node_t *octree_node_get(octree_t *octree, uint32_t index, uint8_t level)
-{
-    return node_get(octree->root, index, level, octree->depth);
-}
-
-
-node_t *octree_node_get_nearest(
-        octree_t *octree, uint32_t index, uint8_t level)
-{
-    return node_get_nearest(octree->root, index, level, octree->depth);
-}
-
-
-node_t *octree_node_get_or_create(
-        octree_t *octree, uint32_t index, uint8_t level)
-{
-    return node_get_or_create(octree->root, index, level, octree->depth);
-}
-
-
-int octree_leaf_get(octree_t *octree, uint32_t index)
-{
-    return leaf_get(octree->root, index, octree->depth);
-}
-
-
-void octree_leaf_set(octree_t *octree, uint32_t index, leaf_t leaf)
-{
-    leaf_set(octree->root, index, octree->depth, leaf);
-}
-
-
-void octree_free(octree_t *octree)
-{
-    if (octree->root) free(octree->root);
-    if (octree) free(octree);
-}
-
-
-void node_r_save_f(node_t *node, uint8_t oc_depth, FILE *fp)
-{
-    simple_node_t snode = {
-        .is_full = node->is_full,
-        .is_original = node->is_original,
-        .level = node->level,
-        .dom_leaf = node->dom_leaf
-    };
-
-    bool is_last = (snode.level == oc_depth - 1);
-
-    if (!fwrite(&snode, sizeof(snode), 1, fp)) printf("STRUCT NOT WRITTEN\n");
-    node_print(node, "node");
-
-    if (snode.is_full) return;
-
-    if (is_last) {
-        if (!fwrite(node->leaves, sizeof(leaf_t), 8, fp)) {
-            printf("ARRAY NOT WRITTEN\n");
-        }
-        leaves_print(node->leaves, "node->leaves");
-    }
-    else {
-        for (int i = 0; i < 8; i++) {
-            node_r_save_f(node->childreen[i], oc_depth, fp);
-        }
-    }
-}
-
-
-/* NOTE:
- * This recursive functions aren't efficient
- * rewrite later
- */
-void node_r_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
-{
-    simple_node_t snode;
-
-    if (!fread(&snode, sizeof(simple_node_t), 1, fp)) {
-        printf("Error: Couldn't read\n");
-        return;
-    }
-    node_print(node, "node");
-
-    node->is_full = snode.is_full;
-    node->is_original = snode.is_original;
-    node->level = snode.level;
-    node->dom_leaf = snode.dom_leaf;
-    node->childreen = NULL;
-
-    bool is_last = (oc_depth == snode.level + 1);
-
-    if (snode.is_full) return;
-
-    if (is_last) {
-        node->leaves = calloc(8, sizeof(leaf_t));
-        fread(node->leaves, sizeof(leaf_t), 8, fp);
-        leaves_print(node->leaves, "node->leaves");
-    }
-    else {
-        node_create_childreen(node);
-        for (int i = 0; i < 8; i++) {
-            node_r_load_f(node->childreen[i], oc_depth, fp);
-        }
-    }
-}
-
-
 uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
 {
     node_t *cnode = node;
@@ -521,21 +351,111 @@ uint32_t node_load_f(node_t *node, uint8_t oc_depth, FILE *fp)
 }
 
 
+/* NOTE:
+ * Recursive slow. Rewrite this function later.
+ */
+void node_r_free_last(node_t *node, uint8_t last, uint8_t depth)
+{
+    uint8_t level = node->level;
+    bool is_local_last = (level == last - 1);
+    bool is_last_node = (level == depth - 1);
+
+    if (node->is_full) return;
+
+    if (is_local_last) {
+        if (is_last_node) {
+            free(node->leaves);
+            node->leaves = NULL;
+        }
+        else {
+            for (int i = 0; i < 8; i++) {
+                free(node->childreen[i]);
+            }
+            free(node->childreen);
+            node->childreen = NULL;
+        }
+    }
+    else {
+        for (int i = 0; i < 8; i++) {
+            node_r_free_last(node->childreen[i], last, depth);
+        }
+    }
+}
+
+
+void node_r_free_childreen(node_t *node, uint8_t depth)
+{
+    int l = node->level;
+    for (int i = depth; i > l; i--) {
+        node_r_free_last(node, i, depth);
+    }
+}
+
+
+octree_t *octree_construct(uint8_t depth)
+{
+    octree_t *octree = malloc(sizeof(octree_t));
+
+    octree->root = node_construct();
+    octree->depth = depth;
+    return octree;
+}
+
+
+void octree_r_initialize(octree_t *octree)
+{
+    node_r_initialize(octree->root, octree->depth);
+}
+
+
+void octree_r_free_childreen(octree_t *octree)
+{
+    node_r_free_childreen(octree->root, octree->depth);
+}
+
+
+node_t *octree_node_get(octree_t *octree, uint32_t index, uint8_t level)
+{
+    return node_get(octree->root, index, level, octree->depth);
+}
+
+
+node_t *octree_node_get_nearest(
+        octree_t *octree, uint32_t index, uint8_t level)
+{
+    return node_get_nearest(octree->root, index, level, octree->depth);
+}
+
+
+node_t *octree_node_get_or_create(
+        octree_t *octree, uint32_t index, uint8_t level)
+{
+    return node_get_or_create(octree->root, index, level, octree->depth);
+}
+
+
+int octree_leaf_get(octree_t *octree, uint32_t index)
+{
+    return leaf_get(octree->root, index, octree->depth);
+}
+
+
+void octree_leaf_set(octree_t *octree, uint32_t index, leaf_t leaf)
+{
+    leaf_set(octree->root, index, octree->depth, leaf);
+}
+
+
+void octree_free(octree_t *octree)
+{
+    if (octree->root) free(octree->root);
+    if (octree) free(octree);
+}
+
+
 uint32_t octree_load_f(octree_t *octree, FILE *fp)
 {
     return node_load_f(octree->root, octree->depth, fp);
-}
-
-
-void octree_r_load_f(octree_t *octree, FILE *fp)
-{
-    node_r_load_f(octree->root, octree->depth, fp);
-}
-
-
-void octree_r_save_f(octree_t *octree, FILE *fp)
-{
-    node_r_save_f(octree->root, octree->depth, fp); 
 }
 
 
