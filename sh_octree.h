@@ -1,5 +1,6 @@
 /*
- * Fast Octree library(not sparse octree)
+ * Fast OCTREE_DEF
+Octree library(not sparse octree)
  * Limitations:
  *  - The maximum depth for an octree is 8
 */
@@ -16,18 +17,15 @@
 #define OCTREE_INLINE static inline
 #endif /* OCTREE_INLINE */
 
+
+#ifndef OCTREE_DEF
+#define OCTREE_DEF static
+#endif /* OCTREE_DEF */
+
+
 #ifndef OCTREE_LEAF_TYPE
 #define OCTREE_LEAF_TYPE uint16_t
 #endif /* OCTREE_LEAF_TYPE */
-
-
-#define REPEAT8(statement) {\
-    int i = 0;\
-    statement; i++; statement; i++;\
-    statement; i++; statement; i++;\
-    statement; i++; statement; i++;\
-    statement; i++; statement; i++;\
-}
 
 
 #define LEAVES_INIT(leaf) {leaf, leaf, leaf, leaf, leaf, leaf, leaf, leaf}
@@ -59,6 +57,7 @@ typedef struct
 } octree_t;
 
 
+OCTREE_DEF
 node_t *node_construct(void)
 {
     node_t *node = (node_t *)malloc(sizeof(node_t));
@@ -68,6 +67,7 @@ node_t *node_construct(void)
 }
 
 
+OCTREE_DEF
 void node_init_childreen(node_t *node)
 {
     node->is_full = 0;
@@ -123,6 +123,7 @@ node_t *node_get_nearest(
 
 
 /* Get nodes or create them if they don't exist */
+OCTREE_DEF
 node_t *node_get_or_create(
         node_t *node, uint32_t index, uint8_t level, uint8_t oc_depth)
 {
@@ -154,7 +155,10 @@ bool leaves_full(leaf_t *leaves, leaf_t leaf)
 OCTREE_INLINE
 void leaves_fill(leaf_t *leaves, leaf_t leaf)
 {
-    REPEAT8(leaves[i] = leaf);
+    leaves[0] = leaf; leaves[1] = leaf;
+    leaves[2] = leaf; leaves[3] = leaf;
+    leaves[4] = leaf; leaves[5] = leaf;
+    leaves[6] = leaf; leaves[7] = leaf;
 }
 
 
@@ -216,6 +220,7 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 
 /* Recrusively free the last level */
 /* TODO: write a none recursive versino of this function */
+OCTREE_DEF
 void node_r_free_last(node_t *node, uint8_t last_level, uint8_t depth)
 {
     uint8_t level = node->level;
@@ -245,6 +250,7 @@ void node_r_free_last(node_t *node, uint8_t last_level, uint8_t depth)
 }
 
 
+OCTREE_DEF
 void node_r_free(node_t *node, uint8_t depth)
 {
     // Free all childreen nodes
@@ -257,6 +263,7 @@ void node_r_free(node_t *node, uint8_t depth)
 
 
 
+OCTREE_DEF
 octree_t *octree_construct(uint8_t depth)
 {
     octree_t *octree = (octree_t *)malloc(sizeof(octree_t));
@@ -267,6 +274,7 @@ octree_t *octree_construct(uint8_t depth)
 }
 
 
+OCTREE_DEF
 void octree_r_free(octree_t *octree)
 {
     node_r_free(octree->root, octree->depth);
