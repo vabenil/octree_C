@@ -1,6 +1,5 @@
 /*
- * Fast OCTREE_DEF
-Octree library(not sparse octree)
+ * Fast octree library(not sparse octree)
  * Limitations:
  *  - The maximum depth for an octree is 8
 */
@@ -8,6 +7,7 @@ Octree library(not sparse octree)
 #define OCTREE_H
 
 #include <string.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -55,6 +55,14 @@ typedef struct
     node_t *root;
     uint8_t depth;
 } octree_t;
+
+
+typedef struct {
+    bool is_full        : 1;
+    bool is_original    : 1;
+    uint8_t level       : 3;
+    leaf_t dom_leaf;
+} simple_node_t;
 
 
 OCTREE_DEF
@@ -145,6 +153,157 @@ node_t *node_get_or_create(
 }
 
 
+/* Recrusively free the last level */
+/* TODO: write a none recursive versino of this function */
+OCTREE_DEF
+void node_r_free_last(node_t *node, uint8_t last_level, uint8_t depth)
+{
+    uint8_t level = node->level;
+    bool is_local_last = (level == last_level - 1);
+    bool is_last_node = (level == depth - 1);
+
+    if (node->is_full) return;
+
+    if (is_local_last) {
+        if (is_last_node) {
+            free(node->leaves);
+            node->leaves = NULL;
+        }
+        else {
+            for (int i = 0; i < 8; i++) {
+                free(node->childreen[i]);
+            }
+            free(node->childreen);
+            node->childreen = NULL;
+        }
+    }
+    else {
+        for (int i = 0; i < 8; i++) {
+            node_r_free_last(node->childreen[i], last_level, depth);
+        }
+    }
+}
+
+
+OCTREE_DEF
+void node_r_free(node_t *node, uint8_t depth)
+{
+    // Free all childreen nodes
+    for (int i = depth; i > node->level; i--) {
+        node_r_free_last(node, i, depth);
+    }
+
+    free(node);
+}
+
+
+OCTREE_DEF
+uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
+{
+    node_t *cnode = node;
+    uint32_t i = 0, c = 0,
+             bits_written = 0, ofs = 0,
+             max_i = 1 << (oc_depth * 3);
+
+    while (i < max_i) {
+        simple_node_t snode = {
+            .is_full = cnode->is_full,
+            .is_original = cnode->is_original,
+            .level = cnode->level,
+            .dom_leaf = cnode->dom_leaf
+        };
+        
+        bool is_last = (snode.level == oc_depth - 1);
+        bool is_full = snode.is_full;
+        uint8_t depth = oc_depth - snode.level;
+        uint8_t levels = depth - (!(is_full || is_last));
+        uint32_t increment = (is_full || is_last) << (levels * 3);
+        uint32_t prev_i = i, nl;
+
+        memcpy(buff + ofs, &snode, sizeof(snode));
+        ofs += sizeof(snode);
+
+        bits_written += sizeof(snode);
+
+        if (!is_full) {
+            if (is_last) {
+                memcpy(buff + ofs, cnode->leaves, sizeof(leaf_t [8]));
+                ofs += sizeof(leaf_t [8]);
+
+                bits_written += sizeof(leaf_t [8]);
+            }
+        }
+        i+= increment;
+
+        /* Next level to write */
+        if (increment == 0) {
+            nl = snode.level + 1;
+        }
+        else {
+            uint32_t diff = 1 ^ prev_i;
+            nl = 1;
+            for (; nl < snode.level; nl++)
+                if ((diff >> ((oc_depth - nl) * 3)) & 0x7) break;
+        }
+        cnode = node_get_nearest(node, i, nl, oc_depth);
+        c++;
+    }
+
+    return bits_written;
+}
+
+
+OCTREE_DEF
+uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
+{
+    node_t *cnode = node;
+    uint32_t i = 0, c = 0,
+             bits_read = 0, ofs = 0,
+             max_i = 1 << (oc_depth * 3);
+
+    while (i < max_i) {
+        simple_node_t snode;
+        uint32_t levels, increment, depth;
+        bool is_full, is_last;
+
+        memcpy(&snode, buff + ofs, sizeof(snode));
+
+        ofs += sizeof(snode);
+        bits_read += sizeof(snode);
+
+        depth = oc_depth - snode.level;
+        is_last = (snode.level == oc_depth - 1);
+        levels = depth - (!(snode.is_full || is_last));
+
+        cnode->is_full = snode.is_full;
+        cnode->is_original = snode.is_original;
+        cnode->level = snode.level;
+        cnode->dom_leaf = snode.dom_leaf;
+
+        increment = (snode.is_full || is_last) << (levels * 3);
+        
+        if (!snode.is_full) {
+            if (is_last) {
+                cnode->leaves = (leaf_t *)calloc(8, sizeof(leaf_t));
+
+                memcpy(cnode->leaves, buff + ofs, sizeof(leaf_t [8]));
+
+                ofs += sizeof(leaf_t [8]);
+                bits_read += sizeof(leaf_t [8]);
+            }
+            else {
+                node_init_childreen(cnode);
+            }
+        }
+        i += increment;
+
+        cnode = node_get_nearest(node, i, oc_depth - 1, oc_depth);
+        c++;
+    }
+    return bits_read;
+}
+
+
 OCTREE_INLINE
 bool leaves_full(leaf_t *leaves, leaf_t leaf)
 {
@@ -218,51 +377,6 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 
 
 
-/* Recrusively free the last level */
-/* TODO: write a none recursive versino of this function */
-OCTREE_DEF
-void node_r_free_last(node_t *node, uint8_t last_level, uint8_t depth)
-{
-    uint8_t level = node->level;
-    bool is_local_last = (level == last_level - 1);
-    bool is_last_node = (level == depth - 1);
-
-    if (node->is_full) return;
-
-    if (is_local_last) {
-        if (is_last_node) {
-            free(node->leaves);
-            node->leaves = NULL;
-        }
-        else {
-            for (int i = 0; i < 8; i++) {
-                free(node->childreen[i]);
-            }
-            free(node->childreen);
-            node->childreen = NULL;
-        }
-    }
-    else {
-        for (int i = 0; i < 8; i++) {
-            node_r_free_last(node->childreen[i], last_level, depth);
-        }
-    }
-}
-
-
-OCTREE_DEF
-void node_r_free(node_t *node, uint8_t depth)
-{
-    // Free all childreen nodes
-    for (int i = depth; i > node->level; i--) {
-        node_r_free_last(node, i, depth);
-    }
-
-    free(node);
-}
-
-
-
 OCTREE_DEF
 octree_t *octree_construct(uint8_t depth)
 {
@@ -302,6 +416,20 @@ node_t *octree_node_get_or_create(
 {
     return node_get_or_create(octree->root, index, level, octree->depth);
 
+}
+
+
+OCTREE_DEF
+uint32_t octree_load_buffer(octree_t *octree, const char *buff)
+{
+    return node_load_buffer(octree->root, octree->depth, buff);
+}
+
+
+OCTREE_DEF
+uint32_t octree_save_buffer(octree_t *octree, char *buff)
+{
+    return node_save_buffer(octree->root, octree->depth, buff);
 }
 
 
