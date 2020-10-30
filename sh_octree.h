@@ -283,7 +283,7 @@ int node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
 
 
 OCTREE_DEF
-uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
+int node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
 {
     node_t *cnode = node;
     uint32_t i = 0, c = 0,
@@ -315,13 +315,15 @@ uint32_t node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff)
             if (is_last) {
                 cnode->leaves = (leaf_t *)calloc(8, sizeof(leaf_t));
 
+                if (cnode->leaves == NULL) return -1;
+
                 memcpy(cnode->leaves, buff + ofs, sizeof(leaf_t [8]));
 
                 ofs += sizeof(leaf_t [8]);
                 bits_read += sizeof(leaf_t [8]);
             }
             else {
-                node_init_childreen(cnode);
+                if (!node_init_childreen(cnode)) return -1;
             }
         }
         i += increment;
