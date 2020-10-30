@@ -6,6 +6,27 @@
 #ifndef OCTREE_H
 #define OCTREE_H
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+// Stop MSVC complaining about not inlining functions.
+#pragma warning(disable : 4710)
+// Stop MSVC complaining about inlining functions!
+#pragma warning(disable : 4711)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
+/* TODO: add used flag in function defs to prevent gcc from complaining */
+#if defined(_MSC_VER)
+#define OCTREE_USED
+#elif defined(__GNUC__)
+#define OCTREE_USED __attribute__((used))
+#else
+#define OCTREE_USED
+#endif
+
+
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
