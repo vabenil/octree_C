@@ -473,7 +473,7 @@ int octree_load_buffer(octree_t *octree, const char *buff)
 
 
 OCTREE_DEF
-itn octree_save_buffer(octree_t *octree, char *buff)
+int octree_save_buffer(octree_t *octree, char *buff)
 {
     return node_save_buffer(octree->root, octree->depth, buff);
 }
