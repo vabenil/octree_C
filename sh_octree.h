@@ -457,15 +457,23 @@ node_t *octree_node_get_or_create(
 }
 
 
+/* octree_load_buffer
+ * params:
+ *      * octree - octree to write to.
+ *      * buff - buffer containing the raw octree data.
+ * description:
+ *      * Attempt to load raw data into octree. On failure -1  is returned and
+ *      the octree's root node is freed. Otherwise the bits read is returned
+ */
 OCTREE_DEF
-uint32_t octree_load_buffer(octree_t *octree, const char *buff)
+int octree_load_buffer(octree_t *octree, const char *buff)
 {
     return node_load_buffer(octree->root, octree->depth, buff);
 }
 
 
 OCTREE_DEF
-uint32_t octree_save_buffer(octree_t *octree, char *buff)
+itn octree_save_buffer(octree_t *octree, char *buff)
 {
     return node_save_buffer(octree->root, octree->depth, buff);
 }
