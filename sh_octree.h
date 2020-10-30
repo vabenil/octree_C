@@ -91,7 +91,7 @@ node_t *node_construct(void)
 {
     node_t *node = (node_t *)malloc(sizeof(node_t));
 
-    *node = (node_t) {{NULL}, 0, 0, 0, 0};
+    if (node) *node = (node_t) {{NULL}, 0, 0, 0, 0};
     return node;
 }
 
