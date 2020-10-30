@@ -487,8 +487,8 @@ leaf_t octree_leaf_get(octree_t *octree, uint32_t index)
 
 
 OCTREE_INLINE
-void octree_leaf_set(octree_t *octree, uint32_t index, leaf_t leaf)
+int octree_leaf_set(octree_t *octree, uint32_t index, leaf_t leaf)
 {
-    leaf_set(octree->root, index, octree->depth, leaf);
+    return leaf_set(octree->root, index, octree->depth, leaf);
 }
 #endif /* OCTREE_H */
