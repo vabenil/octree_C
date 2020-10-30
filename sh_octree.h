@@ -378,14 +378,15 @@ int leaf_get(node_t *node, uint32_t index, uint8_t oc_depth)
 
 
 OCTREE_INLINE
-void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
+int leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 {
+    int success = 0;
     node_t *l_node = node_get_nearest(node, index, oc_depth - 1, oc_depth);
     bool is_last = (l_node->level == oc_depth - 1);
 
     if (l_node->is_full) {
         /* Nothing to be done */
-        if (l_node->dom_leaf == leaf) return;
+        if (l_node->dom_leaf == leaf) return 1;
 
         l_node = (is_last)
             ? l_node
@@ -394,17 +395,20 @@ void leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
         node_leaves_init(l_node, l_node->dom_leaf);
     }
 
-    l_node->leaves[index & 0x7] = leaf;
+    if (l_node->leaves) {
+        l_node->leaves[index & 0x7] = leaf;
+        sucess = 1;
 
-    /* This may be better to be done by seperate in a function called
-     * node_optimize or something like that, along with optimization to nodes
-    */
-    if (leaves_full(l_node->leaves, leaf)) {
-        free(l_node->leaves);
-        l_node->leaves = NULL;
-        l_node->is_full = true;
-        l_node->dom_leaf = leaf;
+        /* TODO: Add node_optimize function */
+        if (leaves_full(l_node->leaves, leaf)) {
+            free(l_node->leaves);
+            l_node->leaves = NULL;
+            l_node->is_full = true;
+            l_node->dom_leaf = leaf;
+        }
     }
+
+    return success;
 }
 
 
@@ -414,8 +418,10 @@ octree_t *octree_construct(uint8_t depth)
 {
     octree_t *octree = (octree_t *)malloc(sizeof(octree_t));
 
-    octree->root = node_construct();
-    octree->depth = depth;
+    if (octree) {
+        octree->root = node_construct();
+        octree->depth = depth;
+    }
     return octree;
 }
 
