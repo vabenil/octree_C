@@ -97,18 +97,26 @@ node_t *node_construct(void)
 
 
 OCTREE_DEF
-void node_init_childreen(node_t *node)
+int node_init_childreen(node_t *node)
 {
-    node->is_full = 0;
-
+    int success = 0;
     const uint8_t level = node->level + 1;
     node_t base_node = {{NULL}, 1, 1, level, node->dom_leaf};
     
     node->childreen = (node_t **)calloc(8, sizeof(node_t *));
-    for (int i = 0; i < 8; i++) {
-        node_t *child = node->childreen[i] = node_construct();
-        *(child) = base_node;
+    node->is_full = 0;
+
+    if (node->childreen) {
+        for (int i = 0; i < 8; i++) {
+            node_t *child = node->childreen[i] = node_construct();
+
+            if (child) {
+                *(child) = base_node;
+                success = 1;
+            }
+        }
     }
+    return success;
 }
 
 
