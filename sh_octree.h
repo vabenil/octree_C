@@ -357,7 +357,8 @@ void node_leaves_init(node_t *node, leaf_t leaf)
 {
     node->is_full = false;
     node->leaves = (leaf_t *)calloc(8, sizeof(leaf_t));
-    leaves_fill(node->leaves, node->dom_leaf);
+
+    if (node->leaves) leaves_fill(node->leaves, node->dom_leaf);
 }
 
 
