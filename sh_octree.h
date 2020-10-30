@@ -397,7 +397,7 @@ int leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
 
     if (l_node->leaves) {
         l_node->leaves[index & 0x7] = leaf;
-        sucess = 1;
+        success = 1;
 
         /* TODO: Add node_optimize function */
         if (leaves_full(l_node->leaves, leaf)) {
