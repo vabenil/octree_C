@@ -227,7 +227,7 @@ void node_r_free(node_t *node, uint8_t depth)
 
 
 OCTREE_DEF
-uint32_t node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
+int node_save_buffer(node_t *node, uint8_t oc_depth, char *buff)
 {
     node_t *cnode = node;
     uint32_t i = 0, c = 0,
