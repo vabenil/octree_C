@@ -93,7 +93,7 @@ typedef struct node_s
     };
     bool is_full        : 1;
     bool is_original    : 1;
-    uint8_t level       : 3;
+    uint8_t level       : 4;
     leaf_t dom_leaf;
 } node_t;
 
@@ -108,7 +108,7 @@ typedef struct
 typedef struct {
     bool is_full        : 1;
     bool is_original    : 1;
-    uint8_t level       : 3;
+    uint8_t level       : 4;
     leaf_t dom_leaf;
 } simple_node_t;
 
