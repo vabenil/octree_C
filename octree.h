@@ -118,6 +118,30 @@ OCTREE_DEF
 int node_load_buffer(node_t *node, uint8_t oc_depth, const char *buff);
 
 
+OCTREE_DEF
+octree_t *octree_construct(uint8_t depth);
+
+
+OCTREE_DEF
+void octree_r_free(octree_t *octree);
+
+
+/* octree_load_buffer
+ * params:
+ *      * octree - octree to write to.
+ *      * buff - buffer containing the raw octree data.
+ * description:
+ *      * Attempt to load raw data into octree. On failure -1  is returned and
+ *      the octree's root node is freed. Otherwise the bits read is returned
+ */
+OCTREE_DEF
+int octree_load_buffer(octree_t *octree, const char *buff);
+
+
+OCTREE_DEF
+int octree_save_buffer(octree_t *octree, char *buff);
+
+
 /* Naive function, shouldn't be used */
 OCTREE_INLINE
 node_t *node_get(node_t *node, uint32_t index, uint8_t level, uint8_t oc_depth)
@@ -233,29 +257,6 @@ int leaf_set(node_t *node, uint32_t index, uint8_t oc_depth, leaf_t leaf)
     return success;
 }
 
-
-OCTREE_DEF
-octree_t *octree_construct(uint8_t depth);
-
-
-OCTREE_DEF
-void octree_r_free(octree_t *octree);
-
-
-/* octree_load_buffer
- * params:
- *      * octree - octree to write to.
- *      * buff - buffer containing the raw octree data.
- * description:
- *      * Attempt to load raw data into octree. On failure -1  is returned and
- *      the octree's root node is freed. Otherwise the bits read is returned
- */
-OCTREE_DEF
-int octree_load_buffer(octree_t *octree, const char *buff);
-
-
-OCTREE_DEF
-int octree_save_buffer(octree_t *octree, char *buff);
 
 
 OCTREE_INLINE
