@@ -372,10 +372,10 @@ bool leaves_full(leaf_t *leaves, leaf_t leaf)
 OCTREE_INLINE
 void leaves_fill(leaf_t *leaves, leaf_t leaf)
 {
-    leaves[0] = leaf; leaves[1] = leaf;
-    leaves[2] = leaf; leaves[3] = leaf;
-    leaves[4] = leaf; leaves[5] = leaf;
-    leaves[6] = leaf; leaves[7] = leaf;
+    leaves[0] = leaves[1] =
+    leaves[2] = leaves[3] =
+    leaves[4] = leaves[5] =
+    leaves[6] = leaves[7] = leaf;
 }
 
 
