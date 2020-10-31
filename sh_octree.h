@@ -1,7 +1,34 @@
 /*
  * Fast octree library(not sparse octree)
  * Limitations:
- *  - The maximum depth for an octree is 8
+ *  - The maximum depth for an octree is 10
+ * Important remark:
+ *  - Indices are 4 byte unsigned integers containing a 3-bit number represeing
+ *  the location of each node relative to it's parent.
+ *
+ *  Example:
+ *      location in octree - (1, 2, 0)
+ *
+ *      root node:
+ *          node:   <- position relative to parent 0
+ *              node:
+ *                  ...
+ *              node:
+ *                  ...
+ *              node:   <- position relative to parent 2
+ *                   leaf
+ *                   leaf   <- position relative to parent 1
+ *                  <repeat 6x>
+ *              node:
+ *                  ...
+ *              <repeat 4x>
+ *          <repeat 7x>
+ *
+ *      this index could be defined as:
+ *      uint32_t index = 1 << 0 |  2 << 3 | 0 << 6;
+ *
+ *      this makes iterating an octree as easy as doing index++
+ *
 */
 #ifndef OCTREE_H
 #define OCTREE_H
