@@ -169,6 +169,84 @@ OCTREE_DEF
 int octree_save_buffer(octree_t *octree, char *buff);
 
 
+/* TODO: rename this function to something better */
+OCTREE_INLINE
+uint32_t _octree_i3d_to_uint(uint32_t x)
+{
+    return ((x) & 0x1) | (((x) & 0x2) << 9) | (((x) & 0x4) << 18);
+}
+
+
+/* TODO: rename this function to something better */
+OCTREE_INLINE
+uint32_t _octree_uint_to_i3d(uint32_t x) {
+    return ((x) & 0x1) | (((x) >> 9) & 0x2) | (((x) >> 18) & 0x4);
+}
+
+
+OCTREE_INLINE
+uint32_t octree_pack_pos(uint32_t p[3])
+{
+    return ((p[0] & 0x3FF) |
+            (p[1] & 0xFFC00) << 10 |
+            (p[2] & 0x3FF00000) << 20);
+}
+
+
+OCTREE_INLINE
+void octree_unpack_pos(uint32_t x, uint32_t pos[3])
+{
+    pos[0] = (x & 0x3FF);
+    pos[1] = (x & 0xFFC00) >> 10;
+    pos[2] = (x & 0x3FF00000) >> 20;
+}
+
+
+OCTREE_INLINE
+uint32_t octree_packed_pos_to_index(uint32_t packed, uint8_t oc_depth)
+{
+    uint32_t index = 0,
+             bit = 0;
+    for (int i = 0; i < oc_depth; i++) {
+        index += _octree_uint_to_i3d(packed >> i) << bit;
+        bit += 3;
+    }
+    return index;
+}
+
+
+OCTREE_INLINE
+uint32_t octree_index_to_packed_pos(uint32_t index, uint8_t oc_depth)
+{
+    uint32_t packed = 0,
+             bit = 0;
+    for (int i = 0; i < oc_depth; i++) {
+        packed += _octree_i3d_to_uint(index >> bit) << i;
+        bit += 3;
+    }
+    return packed;
+}
+
+
+OCTREE_INLINE
+uint32_t octree_pos_to_index(uint32_t pos[3], uint8_t oc_depth)
+{
+    uint32_t packed = octree_pack_pos(pos);
+
+    return octree_index_to_packed_pos(packed, oc_depth);
+}
+
+
+OCTREE_INLINE
+void octree_index_to_pos(uint32_t index, uint32_t pos[3], uint8_t oc_depth)
+{
+    uint32_t packed = octree_index_to_packed_pos(index, oc_depth);
+
+    octree_unpack_pos(packed, pos);
+}
+
+
+
 /* Naive function, shouldn't be used */
 OCTREE_INLINE
 node_t *node_get(node_t *node, uint32_t index, uint8_t level, uint8_t oc_depth)
