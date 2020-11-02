@@ -188,8 +188,8 @@ OCTREE_INLINE
 uint32_t octree_pack_pos(int p[3])
 {
     return (((uint32_t)p[0] & 0x3FF) |
-            ((uint32_t)p[1] & 0xFFC00) << 10 |
-            ((uint32_t)p[2] & 0x3FF00000) << 20);
+            ((uint32_t)p[1] & 0x3FF) << 10 |
+            ((uint32_t)p[2] & 0x3FF) << 20);
 }
 
 
@@ -233,7 +233,7 @@ uint32_t octree_pos_to_index(int pos[3], uint8_t oc_depth)
 {
     uint32_t packed = octree_pack_pos(pos);
 
-    return octree_index_to_packed_pos(packed, oc_depth);
+    return octree_packed_pos_to_index(packed, oc_depth);
 }
 
 
